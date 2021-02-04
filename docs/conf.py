@@ -55,16 +55,29 @@ extensions = [
     'sphinx_copybutton',
     'xref',
 ]
+bibtex_bibfiles = [
+    "bib/docs.bib",
+    "bib/HEPData_likelihoods.bib",
+    "bib/media.bib",
+    "bib/posters.bib",
+    "bib/preferred.bib",
+    "bib/talks.bib",
+    "bib/tutorials.bib",
+    "bib/use_citations.bib",
+]
 
 # external links
 xref_links = {"arXiv:1007.1727": ("[1007.1727]", "https://arxiv.org/abs/1007.1727")}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'iminuit': ('https://iminuit.readthedocs.io/en/stable/', None),
+    'uproot': ('https://uproot.readthedocs.io/en/latest/', None),
 }
 
-# Github repo
+# GitHub repo
 issues_github_path = 'scikit-hep/pyhf'
 
 # Generate the API documentation when building
@@ -129,6 +142,7 @@ autodoc_mock_imports = [
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = [
     '_build',
+    'JOSS',
     '**.ipynb_checkpoints',
     'examples/experiments/edwardpyhf.ipynb',
     'examples/notebooks/ImpactPlot.ipynb',
@@ -219,6 +233,14 @@ html_theme_path = []
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_css_files = [
+    'css/custom.css',
+]
+
+html_js_files = [
+    'js/custom.js',
+]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

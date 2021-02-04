@@ -32,13 +32,14 @@ def cli():
 def xml2json(entrypoint_xml, basedir, output_file, track_progress):
     """Entrypoint XML: The top-level XML file for the PDF definition."""
     try:
-        import uproot3 as uproot
+        import uproot
 
         assert uproot
     except ImportError:
         log.error(
             "xml2json requires uproot, please install pyhf using the "
-            "xmlio extra: python -m pip install pyhf[xmlio]"
+            "xmlio extra: python -m pip install pyhf[xmlio]",
+            exc_info=True,
         )
     from .. import readxml
 
@@ -61,13 +62,14 @@ def xml2json(entrypoint_xml, basedir, output_file, track_progress):
 def json2xml(workspace, output_dir, specroot, dataroot, resultprefix, patch):
     """Convert pyhf JSON back to XML + ROOT files."""
     try:
-        import uproot3 as uproot
+        import uproot
 
         assert uproot
     except ImportError:
         log.error(
             "json2xml requires uproot, please install pyhf using the "
-            "xmlio extra: python -m pip install pyhf[xmlio]"
+            "xmlio extra: python -m pip install pyhf[xmlio]",
+            exc_info=True,
         )
     from .. import writexml
 

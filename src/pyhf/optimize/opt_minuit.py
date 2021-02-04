@@ -1,5 +1,5 @@
 """Minuit Optimizer Class."""
-from .. import default_backend, exceptions
+from .. import exceptions
 from .mixins import OptimizerMixin
 import scipy
 import iminuit
@@ -7,14 +7,14 @@ import iminuit
 
 class minuit_optimizer(OptimizerMixin):
     """
-    Optimizer that uses iminuit.Minuit.migrad.
+    Optimizer that minimizes via :meth:`iminuit.Minuit.migrad`.
     """
 
     __slots__ = ['name', 'errordef', 'steps', 'strategy', 'tolerance']
 
     def __init__(self, *args, **kwargs):
         """
-        Create MINUIT Optimizer.
+        Create :class:`iminuit.Minuit` optimizer.
 
         .. note::
 
@@ -58,17 +58,13 @@ class minuit_optimizer(OptimizerMixin):
             wrapped_objective = objective_and_grad
             jac = None
 
-        kwargs = dict(
-            fcn=wrapped_objective,
-            grad=jac,
-            start=init_pars,
-            error=step_sizes,
-            limit=init_bounds,
-            fix=fixed_bools,
-            print_level=self.verbose,
-            errordef=self.errordef,
-        )
-        return iminuit.Minuit.from_array_func(**kwargs)
+        minuit = iminuit.Minuit(wrapped_objective, init_pars, grad=jac)
+        minuit.errors = step_sizes
+        minuit.limits = init_bounds
+        minuit.fixed = fixed_bools
+        minuit.print_level = self.verbose
+        minuit.errordef = self.errordef
+        return minuit
 
     def _minimize(
         self,
@@ -78,7 +74,6 @@ class minuit_optimizer(OptimizerMixin):
         do_grad=False,
         bounds=None,
         fixed_vals=None,
-        return_uncertainties=False,
         options={},
     ):
 
@@ -90,14 +85,13 @@ class minuit_optimizer(OptimizerMixin):
 
         Minimizer Options:
             maxiter (:obj:`int`): maximum number of iterations. Default is 100000.
-            return_uncertainties (:obj:`bool`): Return uncertainties on the fitted parameters. Default is off.
             strategy (:obj:`int`): See :attr:`iminuit.Minuit.strategy`. Default is to configure in response to `do_grad`.
+            tolerance (:obj:`float`): tolerance for termination. See specific optimizer for detailed meaning. Default is 0.1.
 
         Returns:
             fitresult (scipy.optimize.OptimizeResult): the fit result
         """
         maxiter = options.pop('maxiter', self.maxiter)
-        return_uncertainties = options.pop('return_uncertainties', False)
         # 0: Fast, user-provided gradient
         # 1: Default, no user-provided gradient
         strategy = options.pop(
@@ -113,7 +107,7 @@ class minuit_optimizer(OptimizerMixin):
         minimizer.tol = tolerance
         minimizer.migrad(ncall=maxiter)
         # Following lines below come from:
-        # https://github.com/scikit-hep/iminuit/blob/64acac11cfa2fb91ccbd02d1b3c51f8a9e2cc484/src/iminuit/_minimize.py#L102-L121
+        # https://github.com/scikit-hep/iminuit/blob/23bad7697e39d363f259ca8349684df939b1b2e6/src/iminuit/_minimize.py#L111-L130
         message = "Optimization terminated successfully."
         if not minimizer.valid:
             message = "Optimization failed."
@@ -123,25 +117,25 @@ class minuit_optimizer(OptimizerMixin):
             if fmin.is_above_max_edm:
                 message += " Estimated distance to minimum too large."
 
-        n = len(x0)
-        hess_inv = default_backend.ones((n, n))
+        hess_inv = None
+        corr = None
+        unc = None
         if minimizer.valid:
             # Extra call to hesse() after migrad() is always needed for good error estimates. If you pass a user-provided gradient to MINUIT, convergence is faster.
             minimizer.hesse()
-            hess_inv = minimizer.np_covariance()
-
-        unc = None
-        if return_uncertainties:
-            unc = minimizer.np_errors()
+            hess_inv = minimizer.covariance
+            corr = hess_inv.correlation()
+            unc = minimizer.errors
 
         return scipy.optimize.OptimizeResult(
-            x=minimizer.np_values(),
+            x=minimizer.values,
             unc=unc,
+            corr=corr,
             success=minimizer.valid,
             fun=minimizer.fval,
             hess_inv=hess_inv,
             message=message,
-            nfev=minimizer.ncalls_total,
-            njev=minimizer.ngrads_total,
+            nfev=minimizer.nfcn,
+            njev=minimizer.ngrad,
             minuit=minimizer,
         )

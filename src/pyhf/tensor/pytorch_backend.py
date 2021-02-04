@@ -172,7 +172,9 @@ class pytorch_backend:
         try:
             dtype = self.dtypemap[dtype]
         except KeyError:
-            log.error('Invalid dtype: dtype must be float, int, or bool.')
+            log.error(
+                'Invalid dtype: dtype must be float, int, or bool.', exc_info=True
+            )
             raise
 
         return torch.as_tensor(tensor_in, dtype=dtype)
@@ -291,11 +293,13 @@ class pytorch_backend:
         max_dim = max(map(len, args))
         try:
             assert not [arg for arg in args if 1 < len(arg) < max_dim]
-        except AssertionError as error:
+        except AssertionError:
             log.error(
-                'ERROR: The arguments must be of compatible size: 1 or %i', max_dim
+                'ERROR: The arguments must be of compatible size: 1 or %i',
+                max_dim,
+                exc_info=True,
             )
-            raise error
+            raise
 
         broadcast = [arg if len(arg) > 1 else arg.expand(max_dim) for arg in args]
         return broadcast
@@ -454,3 +458,30 @@ class pytorch_backend:
 
         """
         return torch.distributions.Normal(mu, sigma)
+
+    def to_numpy(self, tensor_in):
+        """
+        Convert the PyTorch tensor to a :class:`numpy.ndarray`.
+
+        Example:
+            >>> import pyhf
+            >>> pyhf.set_backend("pytorch")
+            >>> tensor = pyhf.tensorlib.astensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+            >>> tensor
+            tensor([[1., 2., 3.],
+                    [4., 5., 6.]])
+            >>> numpy_ndarray = pyhf.tensorlib.to_numpy(tensor)
+            >>> numpy_ndarray
+            array([[1., 2., 3.],
+                   [4., 5., 6.]], dtype=float32)
+            >>> type(numpy_ndarray)
+            <class 'numpy.ndarray'>
+
+        Args:
+            tensor_in (:obj:`tensor`): The input tensor object.
+
+        Returns:
+            :class:`numpy.ndarray`: The tensor converted to a NumPy ``ndarray``.
+
+        """
+        return tensor_in.numpy()

@@ -9,10 +9,9 @@ pure-python fitting/limit-setting/interval estimation HistFactory-style
 |GitHub Project| |DOI| |Scikit-HEP| |NSF Award Number|
 
 |GitHub Actions Status: CI| |GitHub Actions Status: Docs| |GitHub Actions Status: Publish|
-|Docker Automated| |Code Coverage| |Language grade: Python| |CodeFactor|
-|pre-commit.ci Status| |Code style: black|
+|Docker Automated| |Code Coverage| |CodeFactor| |pre-commit.ci Status| |Code style: black|
 
-|Docs| |Binder|
+|Docs from latest| |Docs from master| |Binder|
 
 |PyPI version| |Conda-forge version| |Supported Python versions| |Docker Stars| |Docker
 Pulls|
@@ -43,7 +42,7 @@ This is how you use the ``pyhf`` Python API to build a statistical model and run
    >>> model = pyhf.simplemodels.hepdata_like(signal_data=[12.0, 11.0], bkg_data=[50.0, 52.0], bkg_uncerts=[3.0, 7.0])
    >>> data = [51, 48] + model.config.auxdata
    >>> test_mu = 1.0
-   >>> CLs_obs, CLs_exp = pyhf.infer.hypotest(test_mu, data, model, qtilde=True, return_expected=True)
+   >>> CLs_obs, CLs_exp = pyhf.infer.hypotest(test_mu, data, model, test_stat="qtilde", return_expected=True)
    >>> print(f"Observed: {CLs_obs}, Expected: {CLs_exp}")
    Observed: 0.05251497423736956, Expected: 0.06445320535890459
 
@@ -57,13 +56,12 @@ Alternatively the statistical model and observational data can be read from its 
    >>> model = wspace.model()
    >>> data = wspace.data(model)
    >>> test_mu = 1.0
-   >>> CLs_obs, CLs_exp = pyhf.infer.hypotest(test_mu, data, model, qtilde=True, return_expected=True)
+   >>> CLs_obs, CLs_exp = pyhf.infer.hypotest(test_mu, data, model, test_stat="qtilde", return_expected=True)
    >>> print(f"Observed: {CLs_obs}, Expected: {CLs_exp}")
    Observed: 0.3599840922126626, Expected: 0.3599840922126626
 
 
-Finally, you can also use the command line interface that ``pyhf`` provides which
-should produce the following JSON output:
+Finally, you can also use the command line interface that ``pyhf`` provides
 
 .. code:: bash
 
@@ -92,6 +90,11 @@ should produce the following JSON output:
        "version": "1.0.0"
    }
    EOF
+
+which should produce the following JSON output:
+
+.. code:: json
+
    {
       "CLs_exp": [
          0.0026062609501074576,
@@ -116,6 +119,7 @@ Implemented variations:
   - ☑ ShapeFactor
   - ☑ StatError
   - ☑ Lumi Uncertainty
+  - ☑ Non-asymptotic calculators
 
 Computational Backends:
   - ☑ NumPy
@@ -134,7 +138,6 @@ Todo
 ----
 
 -  ☐ StatConfig
--  ☐ Non-asymptotic calculators
 
 results obtained from this package are validated against output computed
 from HistFactory workspaces
@@ -157,7 +160,9 @@ A one bin example
 
    poi_vals = np.linspace(0, 5, 41)
    results = [
-       pyhf.infer.hypotest(test_poi, data, model, qtilde=True, return_expected_set=True)
+       pyhf.infer.hypotest(
+           test_poi, data, model, test_stat="qtilde", return_expected_set=True
+       )
        for test_poi in poi_vals
    ]
 
@@ -166,6 +171,7 @@ A one bin example
    ax.set_xlabel(r"$\mu$ (POI)")
    ax.set_ylabel(r"$\mathrm{CL}_{s}$")
    pyhf.contrib.viz.brazil.plot_results(ax, poi_vals, results)
+   fig.show()
 
 **pyhf**
 
@@ -199,7 +205,9 @@ A two bin example
 
    poi_vals = np.linspace(0, 5, 41)
    results = [
-       pyhf.infer.hypotest(test_poi, data, model, qtilde=True, return_expected_set=True)
+       pyhf.infer.hypotest(
+           test_poi, data, model, test_stat="qtilde", return_expected_set=True
+       )
        for test_poi in poi_vals
    ]
 
@@ -208,6 +216,7 @@ A two bin example
    ax.set_xlabel(r"$\mu$ (POI)")
    ax.set_ylabel(r"$\mathrm{CL}_{s}$")
    pyhf.contrib.viz.brazil.plot_results(ax, poi_vals, results)
+   fig.show()
 
 
 **pyhf**
@@ -251,16 +260,8 @@ Questions
 ---------
 
 If you have a question about the use of ``pyhf`` not covered in `the
-documentation <https://scikit-hep.org/pyhf/>`__, please ask a question
-on `Stack Overflow <https://stackoverflow.com/questions/tagged/pyhf>`__
-with the ``[pyhf]`` tag, which the ``pyhf`` dev team
-`watches <https://stackoverflow.com/questions/tagged/pyhf?sort=Newest&filters=NoAcceptedAnswer&edited=true>`__.
-
-.. image:: https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-logo.png
-   :alt: Stack Overflow pyhf tag
-   :width: 50 %
-   :target: https://stackoverflow.com/questions/tagged/pyhf
-   :align: center
+documentation <https://pyhf.readthedocs.io/>`__, please ask a question
+on the `GitHub Discussions <https://github.com/scikit-hep/pyhf/discussions>`__.
 
 If you believe you have found a bug in ``pyhf``, please report it in the
 `GitHub
@@ -282,8 +283,8 @@ BibTeX entry for citation of ``pyhf`` is
 
    @software{pyhf,
      author = "{Heinrich, Lukas and Feickert, Matthew and Stark, Giordon}",
-     title = "{pyhf: v0.5.3}",
-     version = {0.5.3},
+     title = "{pyhf: v0.5.4}",
+     version = {0.5.4},
      doi = {10.5281/zenodo.1169739},
      url = {https://github.com/scikit-hep/pyhf},
    }
@@ -326,8 +327,6 @@ and grant `OAC-1450377 <https://www.nsf.gov/awardsearch/showAward?AWD_ID=1450377
    :target: https://hub.docker.com/r/pyhf/pyhf/
 .. |Code Coverage| image:: https://codecov.io/gh/scikit-hep/pyhf/graph/badge.svg?branch=master
    :target: https://codecov.io/gh/scikit-hep/pyhf?branch=master
-.. |Language grade: Python| image:: https://img.shields.io/lgtm/grade/python/g/scikit-hep/pyhf.svg?logo=lgtm&logoWidth=18
-   :target: https://lgtm.com/projects/g/scikit-hep/pyhf/latest/files/
 .. |CodeFactor| image:: https://www.codefactor.io/repository/github/scikit-hep/pyhf/badge
    :target: https://www.codefactor.io/repository/github/scikit-hep/pyhf
 .. |pre-commit.ci Status| image:: https://results.pre-commit.ci/badge/github/scikit-hep/pyhf/master.svg
@@ -335,14 +334,16 @@ and grant `OAC-1450377 <https://www.nsf.gov/awardsearch/showAward?AWD_ID=1450377
   :alt: pre-commit.ci status
 .. |Code style: black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
-.. |Docs| image:: https://img.shields.io/badge/docs-master-blue.svg
+.. |Docs from latest| image:: https://img.shields.io/badge/docs-v0.5.4-blue.svg
+   :target: https://pyhf.readthedocs.io/
+.. |Docs from master| image:: https://img.shields.io/badge/docs-master-blue.svg
    :target: https://scikit-hep.github.io/pyhf
 .. |Binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/scikit-hep/pyhf/master?filepath=docs%2Fexamples%2Fnotebooks%2Fbinderexample%2FStatisticalAnalysis.ipynb
 .. |PyPI version| image:: https://badge.fury.io/py/pyhf.svg
    :target: https://badge.fury.io/py/pyhf
 .. |Conda-forge version| image:: https://img.shields.io/conda/vn/conda-forge/pyhf.svg
-   :target: https://anaconda.org/conda-forge/pyhf
+   :target: https://github.com/conda-forge/pyhf-feedstock
 .. |Supported Python versions| image:: https://img.shields.io/pypi/pyversions/pyhf.svg
    :target: https://pypi.org/project/pyhf/
 .. |Docker Stars| image:: https://img.shields.io/docker/stars/pyhf/pyhf.svg

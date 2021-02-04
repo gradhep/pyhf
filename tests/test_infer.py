@@ -25,9 +25,9 @@ def test_upperlimit(tmpdir, hypotest_args):
     Check that the default return structure of pyhf.infer.hypotest is as expected
     """
     _, data, model = hypotest_args
-    observed_limit, expected_limits = pyhf.infer.intervals.upperlimit(
-        data, model, scan=np.linspace(0, 5, 11)
-    )
+    results = pyhf.infer.intervals.upperlimit(data, model, scan=np.linspace(0, 5, 11))
+    assert len(results) == 2
+    observed_limit, expected_limits = results
     assert observed_limit == pytest.approx(1.0262704738584554)
     assert expected_limits == pytest.approx(
         [0.65765653, 0.87999725, 1.12453992, 1.50243428, 2.09232927]
@@ -93,40 +93,47 @@ def test_hypotest_poi_outofbounds(tmpdir, hypotest_args):
         pyhf.infer.hypotest(10.1, data, pdf)
 
 
-def test_hypotest_return_tail_probs(tmpdir, hypotest_args):
+@pytest.mark.parametrize('test_stat', ['q0', 'q', 'qtilde'])
+def test_hypotest_return_tail_probs(tmpdir, hypotest_args, test_stat):
     """
     Check that the return structure of pyhf.infer.hypotest with the
     return_tail_probs keyword arg is as expected
     """
     tb = pyhf.tensorlib
 
-    kwargs = {'return_tail_probs': True}
+    kwargs = {'return_tail_probs': True, 'test_stat': test_stat}
     result = pyhf.infer.hypotest(*hypotest_args, **kwargs)
     # CLs_obs, [CL_sb, CL_b]
     assert len(list(result)) == 2
     assert isinstance(result[0], type(tb.astensor(result[0])))
-    assert len(result[1]) == 2
+    assert len(result[1]) == 1 if test_stat == 'q0' else 2
     assert check_uniform_type(result[1])
 
 
-def test_hypotest_return_expected(tmpdir, hypotest_args):
+@pytest.mark.parametrize('test_stat', ['q0', 'q', 'qtilde'])
+def test_hypotest_return_expected(tmpdir, hypotest_args, test_stat):
     """
     Check that the return structure of pyhf.infer.hypotest with the
     additon of the return_expected keyword arg is as expected
     """
     tb = pyhf.tensorlib
 
-    kwargs = {'return_tail_probs': True, 'return_expected': True}
+    kwargs = {
+        'return_tail_probs': True,
+        'return_expected': True,
+        'test_stat': test_stat,
+    }
     result = pyhf.infer.hypotest(*hypotest_args, **kwargs)
     # CLs_obs, [CLsb, CLb], CLs_exp
     assert len(list(result)) == 3
     assert isinstance(result[0], type(tb.astensor(result[0])))
-    assert len(result[1]) == 2
+    assert len(result[1]) == 1 if test_stat == 'q0' else 2
     assert check_uniform_type(result[1])
     assert isinstance(result[2], type(tb.astensor(result[2])))
 
 
-def test_hypotest_return_expected_set(tmpdir, hypotest_args):
+@pytest.mark.parametrize('test_stat', ['q0', 'q', 'qtilde'])
+def test_hypotest_return_expected_set(tmpdir, hypotest_args, test_stat):
     """
     Check that the return structure of pyhf.infer.hypotest with the
     additon of the return_expected_set keyword arg is as expected
@@ -137,12 +144,13 @@ def test_hypotest_return_expected_set(tmpdir, hypotest_args):
         'return_tail_probs': True,
         'return_expected': True,
         'return_expected_set': True,
+        'test_stat': test_stat,
     }
     result = pyhf.infer.hypotest(*hypotest_args, **kwargs)
     # CLs_obs, [CLsb, CLb], CLs_exp, CLs_exp @[-2, -1, 0, +1, +2]sigma
     assert len(list(result)) == 4
     assert isinstance(result[0], type(tb.astensor(result[0])))
-    assert len(result[1]) == 2
+    assert len(result[1]) == 1 if test_stat == 'q0' else 2
     assert check_uniform_type(result[1])
     assert isinstance(result[2], type(tb.astensor(result[2])))
     assert len(result[3]) == 5
@@ -230,10 +238,10 @@ def test_inferapi_pyhf_independence():
     assert np.isclose(cls, 0.7267836451638846)
 
 
-@pytest.mark.parametrize("qtilde", [True, False])
-def test_calculator_distributions_without_teststatistic(qtilde):
+@pytest.mark.parametrize("test_stat", ["qtilde", "q"])
+def test_calculator_distributions_without_teststatistic(test_stat):
     calc = pyhf.infer.calculators.AsymptoticCalculator(
-        [0.0], {}, [1.0], [(0.0, 10.0)], [False], qtilde=qtilde
+        [0.0], {}, [1.0], [(0.0, 10.0)], [False], test_stat=test_stat
     )
     with pytest.raises(RuntimeError):
         calc.distributions(1.0)
@@ -343,16 +351,16 @@ def test_toy_calculator(tmpdir, hypotest_args):
     )
     assert qtilde_mu_bkg.samples.tolist() == pytest.approx(
         [
-            2.2664625238298868,
-            1.081660885985002,
-            2.757022090389057,
-            1.3835689306226868,
-            0.4707466955809423,
+            2.2664625749100082,
+            1.081660887453154,
+            2.7570218408936853,
+            1.3835691388297846,
+            0.4707467005909507,
             0.0,
-            3.7166483694865065,
-            3.8021896741039427,
-            5.114135403520493,
-            1.35111537136072,
+            3.7166483705294127,
+            3.8021896732709592,
+            5.114135391143066,
+            1.3511153731000718,
         ],
         1e-07,
     )

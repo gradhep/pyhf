@@ -207,7 +207,9 @@ class tensorflow_backend:
         try:
             dtype = self.dtypemap[dtype]
         except KeyError:
-            log.error('Invalid dtype: dtype must be float, int, or bool.')
+            log.error(
+                'Invalid dtype: dtype must be float, int, or bool.', exc_info=True
+            )
             raise
 
         tensor = tensor_in
@@ -357,11 +359,11 @@ class tensorflow_backend:
         max_dim = max(map(tf.size, args))
         try:
             assert not [arg for arg in args if 1 < tf.size(arg) < max_dim]
-        except AssertionError as error:
+        except AssertionError:
             log.error(
                 'ERROR: The arguments must be of compatible size: 1 or %i', max_dim
             )
-            raise error
+            raise
         return [tf.broadcast_to(arg, (max_dim,)) for arg in args]
 
     def einsum(self, subscripts, *operands):
@@ -574,3 +576,31 @@ class tensorflow_backend:
 
         """
         return tfp.distributions.Normal(mu, sigma)
+
+    def to_numpy(self, tensor_in):
+        """
+        Convert the TensorFlow tensor to a :class:`numpy.ndarray`.
+
+        Example:
+            >>> import pyhf
+            >>> pyhf.set_backend("tensorflow")
+            >>> tensor = pyhf.tensorlib.astensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+            >>> print(tensor)
+            tf.Tensor(
+            [[1. 2. 3.]
+             [4. 5. 6.]], shape=(2, 3), dtype=float32)
+            >>> numpy_ndarray = pyhf.tensorlib.to_numpy(tensor)
+            >>> numpy_ndarray
+            array([[1., 2., 3.],
+                   [4., 5., 6.]], dtype=float32)
+            >>> type(numpy_ndarray)
+            <class 'numpy.ndarray'>
+
+        Args:
+            tensor_in (:obj:`tensor`): The input tensor object.
+
+        Returns:
+            :class:`numpy.ndarray`: The tensor converted to a NumPy ``ndarray``.
+
+        """
+        return tensor_in.numpy()

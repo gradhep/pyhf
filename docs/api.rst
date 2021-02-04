@@ -15,6 +15,8 @@ Top-Level
    optimizer
    get_backend
    set_backend
+   readxml
+   writexml
 
 Probability Distribution Functions (PDFs)
 -----------------------------------------
@@ -119,7 +121,9 @@ Inference
 
 .. autosummary::
    :toctree: _generated/
+   :template: modifierclass.rst
 
+   test_statistics.q0
    test_statistics.qmu
    test_statistics.qmu_tilde
    test_statistics.tmu
@@ -135,6 +139,7 @@ Inference
    calculators.AsymptoticCalculator
    calculators.ToyCalculator
    utils.create_calculator
+   utils.get_test_stat
 
 Exceptions
 ----------

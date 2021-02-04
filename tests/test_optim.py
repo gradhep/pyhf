@@ -6,6 +6,7 @@ import pytest
 from scipy.optimize import minimize, OptimizeResult
 import iminuit
 import itertools
+import numpy as np
 
 
 # from https://docs.scipy.org/doc/scipy/reference/tutorial/optimize.html#nelder-mead-simplex-algorithm-method-nelder-mead
@@ -380,7 +381,7 @@ def test_optim_with_value(backend, source, spec, mu):
     )
     assert pyhf.tensorlib.tolist(result)
     assert pyhf.tensorlib.shape(fitted_val) == ()
-    assert pytest.approx(17.52954975, rel=1e-5) == fitted_val
+    assert pytest.approx(17.52954975, rel=1e-5) == pyhf.tensorlib.tolist(fitted_val)
 
 
 @pytest.mark.parametrize('mu', [1.0], ids=['mu=1'])
@@ -406,8 +407,38 @@ def test_optim_uncerts(backend, source, spec, mu):
         fixed_vals=[(pdf.config.poi_index, mu)],
         return_uncertainties=True,
     )
-    assert result.shape[1] == 2
+    assert result.shape == (2, 2)
     assert pytest.approx([0.0, 0.26418431]) == pyhf.tensorlib.tolist(result[:, 1])
+
+
+@pytest.mark.parametrize('mu', [1.0], ids=['mu=1'])
+@pytest.mark.only_numpy_minuit
+def test_optim_correlations(backend, source, spec, mu):
+    pdf = pyhf.Model(spec)
+    data = source['bindata']['data'] + pdf.config.auxdata
+
+    init_pars = pdf.config.suggested_init()
+    par_bounds = pdf.config.suggested_bounds()
+
+    optim = pyhf.optimizer
+
+    result = optim.minimize(pyhf.infer.mle.twice_nll, data, pdf, init_pars, par_bounds)
+    assert pyhf.tensorlib.tolist(result)
+
+    result, correlations = optim.minimize(
+        pyhf.infer.mle.twice_nll,
+        data,
+        pdf,
+        init_pars,
+        par_bounds,
+        [(pdf.config.poi_index, mu)],
+        return_correlations=True,
+    )
+    assert result.shape == (2,)
+    assert correlations.shape == (2, 2)
+    assert pyhf.tensorlib.tolist(result)
+    assert pyhf.tensorlib.tolist(correlations)
+    assert np.allclose([[0.0, 0.0], [0.0, 1.0]], pyhf.tensorlib.tolist(correlations))
 
 
 @pytest.mark.parametrize(
@@ -449,6 +480,18 @@ def test_minuit_failed_optimization(
     if is_above_max_edm:
         assert excinfo.match('Estimated distance to minimum too large')
         assert 'Estimated distance to minimum too large' in spy.spy_return.message
+
+
+def test_minuit_set_options(mocker):
+    pyhf.set_backend('numpy', 'minuit')
+    pdf = pyhf.simplemodels.hepdata_like([5], [10], [3.5])
+    data = [10] + pdf.config.auxdata
+    # no need to postprocess in this test
+    mocker.patch.object(OptimizerMixin, '_internal_postprocess')
+    spy = mocker.spy(pyhf.optimize.minuit_optimizer, '_minimize')
+    pyhf.infer.mle.fit(data, pdf, tolerance=0.5, strategy=0)
+    assert spy.spy_return.minuit.tol == 0.5
+    assert spy.spy_return.minuit.strategy == 0
 
 
 def test_get_tensor_shim(monkeypatch):
@@ -499,10 +542,13 @@ def test_init_pars_sync_fixed_values_minuit(mocker):
     # patch all we need
     from pyhf.optimize import opt_minuit
 
-    minimizer = mocker.patch.object(opt_minuit, 'iminuit')
-    opt._get_minimizer(None, [9, 9, 9], [(0, 10)] * 3, fixed_vals=[(0, 1)])
-    assert minimizer.Minuit.from_array_func.call_args[1]['start'] == [1, 9, 9]
-    assert minimizer.Minuit.from_array_func.call_args[1]['fix'] == [True, False, False]
+    minuit = mocker.patch.object(getattr(opt_minuit, 'iminuit'), 'Minuit')
+    minimizer = opt._get_minimizer(None, [9, 9, 9], [(0, 10)] * 3, fixed_vals=[(0, 1)])
+    assert minuit.called
+    # python 3.6 does not have ::args attribute on ::call_args
+    # assert minuit.call_args.args[1] == [1, 9, 9]
+    assert minuit.call_args[0][1] == [1, 9, 9]
+    assert minimizer.fixed == [True, False, False]
 
 
 def test_step_sizes_fixed_parameters_minuit(mocker):
@@ -511,7 +557,9 @@ def test_step_sizes_fixed_parameters_minuit(mocker):
     # patch all we need
     from pyhf.optimize import opt_minuit
 
-    minimizer = mocker.patch.object(opt_minuit, 'iminuit')
-    opt._get_minimizer(None, [9, 9, 9], [(0, 10)] * 3, fixed_vals=[(0, 1)])
-    assert minimizer.Minuit.from_array_func.call_args[1]['fix'] == [True, False, False]
-    assert minimizer.Minuit.from_array_func.call_args[1]['error'] == [0.0, 0.01, 0.01]
+    minuit = mocker.patch.object(getattr(opt_minuit, 'iminuit'), 'Minuit')
+    minimizer = opt._get_minimizer(None, [9, 9, 9], [(0, 10)] * 3, fixed_vals=[(0, 1)])
+
+    assert minuit.called
+    assert minimizer.fixed == [True, False, False]
+    assert minimizer.errors == [0.0, 0.01, 0.01]

@@ -11,7 +11,6 @@ def hypotest(
     init_pars=None,
     par_bounds=None,
     fixed_params=None,
-    qtilde=True,
     calctype="asymptotics",
     return_tail_probs=False,
     return_expected=False,
@@ -33,7 +32,7 @@ def hypotest(
         >>> data = pyhf.tensorlib.astensor(observations + model.config.auxdata)
         >>> mu_test = 1.0
         >>> CLs_obs, CLs_exp_band = pyhf.infer.hypotest(
-        ...     mu_test, data, model, qtilde=True, return_expected_set=True
+        ...     mu_test, data, model, return_expected_set=True, test_stat="qtilde"
         ... )
         >>> CLs_obs
         array(0.05251497)
@@ -47,9 +46,6 @@ def hypotest(
         init_pars (:obj:`tensor`): The initial parameter values to be used for minimization
         par_bounds (:obj:`tensor`): The parameter value bounds to be used for minimization
         fixed_params (:obj:`tensor`): Whether to fix the parameter to the init_pars value during minimization
-        qtilde (:obj:`bool`): When ``True`` perform the calculation using the alternative
-         test statistic, :math:`\tilde{q}_{\mu}`, as defined under the Wald
-         approximation in Equation (62) of :xref:`arXiv:1007.1727`.
         calctype (:obj:`str`): The calculator to create. Choose either 'asymptotics' (default) or 'toybased'.
         return_tail_probs (:obj:`bool`): Bool for returning :math:`\mathrm{CL}_{s+b}` and :math:`\mathrm{CL}_{b}`
         return_expected (:obj:`bool`): Bool for returning :math:`\mathrm{CL}_{\mathrm{exp}}`
@@ -139,49 +135,41 @@ def hypotest(
         init_pars,
         par_bounds,
         fixed_params,
-        qtilde=qtilde,
         **kwargs,
     )
 
     teststat = calc.teststatistic(poi_test)
-    sig_plus_bkg_distribution, b_only_distribution = calc.distributions(poi_test)
+    sig_plus_bkg_distribution, bkg_only_distribution = calc.distributions(poi_test)
 
-    CLsb = sig_plus_bkg_distribution.pvalue(teststat)
-    CLb = b_only_distribution.pvalue(teststat)
-    CLs = CLsb / CLb
-
-    tensorlib, _ = get_backend()
-    # Ensure that all CL values are 0-d tensors
-    CLsb, CLb, CLs = (
-        tensorlib.astensor(CLsb),
-        tensorlib.astensor(CLb),
-        tensorlib.astensor(CLs),
+    tb, _ = get_backend()
+    CLsb_obs, CLb_obs, CLs_obs = tuple(
+        tb.astensor(pvalue)
+        for pvalue in calc.pvalues(
+            teststat, sig_plus_bkg_distribution, bkg_only_distribution
+        )
+    )
+    CLsb_exp, CLb_exp, CLs_exp = calc.expected_pvalues(
+        sig_plus_bkg_distribution, bkg_only_distribution
     )
 
-    _returns = [CLs]
+    is_q0 = kwargs.get('test_stat', 'qtilde') == 'q0'
+
+    _returns = [CLsb_obs if is_q0 else CLs_obs]
     if return_tail_probs:
-        _returns.append([CLsb, CLb])
+        if is_q0:
+            _returns.append([CLb_obs])
+        else:
+            _returns.append([CLsb_obs, CLb_obs])
+
+    pvalues_exp_band = [
+        tb.astensor(pvalue) for pvalue in (CLsb_exp if is_q0 else CLs_exp)
+    ]
     if return_expected_set:
-        CLs_exp = []
-        for n_sigma in [2, 1, 0, -1, -2]:
-
-            expected_bonly_teststat = b_only_distribution.expected_value(n_sigma)
-
-            CLs = sig_plus_bkg_distribution.pvalue(
-                expected_bonly_teststat
-            ) / b_only_distribution.pvalue(expected_bonly_teststat)
-            CLs_exp.append(tensorlib.astensor(CLs))
         if return_expected:
-            _returns.append(CLs_exp[2])
-        _returns.append(CLs_exp)
+            _returns.append(tb.astensor(pvalues_exp_band[2]))
+        _returns.append(pvalues_exp_band)
     elif return_expected:
-        n_sigma = 0
-        expected_bonly_teststat = b_only_distribution.expected_value(n_sigma)
-
-        CLs = sig_plus_bkg_distribution.pvalue(
-            expected_bonly_teststat
-        ) / b_only_distribution.pvalue(expected_bonly_teststat)
-        _returns.append(tensorlib.astensor(CLs))
+        _returns.append(tb.astensor(pvalues_exp_band[2]))
     # Enforce a consistent return type of the observed CLs
     return tuple(_returns) if len(_returns) > 1 else _returns[0]
 

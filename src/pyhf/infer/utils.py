@@ -1,6 +1,12 @@
 """Inference for Statistical Models."""
 
 from .calculators import AsymptoticCalculator, ToyCalculator
+from ..exceptions import InvalidTestStatistic
+from .test_statistics import q0, qmu, qmu_tilde
+
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def create_calculator(calctype, *args, **kwargs):
@@ -23,7 +29,7 @@ def create_calculator(calctype, *args, **kwargs):
         >>> data = observations + model.config.auxdata
         >>> mu_test = 1.0
         >>> toy_calculator = pyhf.infer.utils.create_calculator(
-        ...     "toybased", data, model, ntoys=100, qtilde=True, track_progress=False
+        ...     "toybased", data, model, ntoys=100, test_stat="qtilde", track_progress=False
         ... )
         >>> qmu_sig, qmu_bkg = toy_calculator.distributions(mu_test)
         >>> qmu_sig.pvalue(mu_test), qmu_bkg.pvalue(mu_test)
@@ -39,3 +45,45 @@ def create_calculator(calctype, *args, **kwargs):
     return {'asymptotics': AsymptoticCalculator, 'toybased': ToyCalculator}[calctype](
         *args, **kwargs
     )
+
+
+def get_test_stat(name):
+    """
+    Get the test statistic function by name. The following test statistics are supported:
+
+    - :func:`~pyhf.infer.test_statistics.q0`
+    - :func:`~pyhf.infer.test_statistics.qmu`
+    - :func:`~pyhf.infer.test_statistics.qmu_tilde`
+
+    Example:
+
+        >>> from pyhf.infer import utils, test_statistics
+        >>> utils.get_test_stat("q0")
+        <function q0 at 0x...>
+        >>> utils.get_test_stat("q0") == test_statistics.q0
+        True
+        >>> utils.get_test_stat("q")
+        <function qmu at 0x...>
+        >>> utils.get_test_stat("q") == test_statistics.qmu
+        True
+        >>> utils.get_test_stat("qtilde")
+        <function qmu_tilde at 0x...>
+        >>> utils.get_test_stat("qtilde") == test_statistics.qmu_tilde
+        True
+
+    Args:
+        name (:obj:`str`): The name of the test statistic to retrieve
+
+
+    Returns:
+        callable: The test statistic function
+    """
+    _mapping = {
+        "q0": q0,
+        "q": qmu,
+        "qtilde": qmu_tilde,
+    }
+    try:
+        return _mapping[name]
+    except KeyError:
+        raise InvalidTestStatistic
