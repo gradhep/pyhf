@@ -216,43 +216,43 @@ def _nominal_and_modifiers_from_spec(config, spec):
         for s in config.samples:
             if mtype == 'histosys':
                 final_mods[key][s]['data']['lo_data'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['lo_data']
+                    jnp.array(mega_mods[key][s]['data']['lo_data'])
                 )
                 final_mods[key][s]['data']['hi_data'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['hi_data']
+                    jnp.array(mega_mods[key][s]['data']['hi_data'])
                 )
                 final_mods[key][s]['data']['nom_data'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['nom_data']
+                    jnp.array(mega_mods[key][s]['data']['nom_data'])
                 )
                 final_mods[key][s]['data']['mask'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['mask']
+                    jnp.array(mega_mods[key][s]['data']['mask'])
                 )
             elif mtype == 'normsys':
                 final_mods[key][s]['data']['mask'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['mask']
+                    jnp.array(mega_mods[key][s]['data']['mask'])
                 )
                 final_mods[key][s]['data']['nom_data'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['mask']
+                    jnp.array(mega_mods[key][s]['data']['mask'])
                 )
                 final_mods[key][s]['data']['hi'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['hi']
+                    jnp.array(mega_mods[key][s]['data']['hi'])
                 )
                 final_mods[key][s]['data']['lo'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['lo']
+                    jnp.array(mega_mods[key][s]['data']['lo'])
                 )
             elif mtype in ['normfactor', 'shapefactor', 'lumi']:
                 final_mods[key][s]['data']['mask'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['mask']
+                    jnp.array(mega_mods[key][s]['data']['mask'])
                 )
             elif mtype in ['shapesys', 'staterror']:
                 final_mods[key][s]['data']['mask'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['mask']
+                    jnp.array(mega_mods[key][s]['data']['mask'])
                 )
                 final_mods[key][s]['data']['uncrt'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['uncrt']
+                    jnp.array(mega_mods[key][s]['data']['uncrt'])
                 )
                 final_mods[key][s]['data']['nom_data'] = tensorlib.concatenate(
-                    mega_mods[key][s]['data']['nom_data']
+                    jnp.array(mega_mods[key][s]['data']['nom_data'])
                 )
             else:
                 raise RuntimeError(
